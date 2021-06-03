@@ -1,2 +1,3 @@
 Pentru informatii despre un anumit pokemon, in EditText trebuie introdus un numar.
 Pentru a obtine lista primilor 20 de pokemons se trimite pe socket "SPECIAL".
+X Nu am implementat partea cu imaginea. X
