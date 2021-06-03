@@ -15,6 +15,10 @@ import java.net.Socket;
 import java.net.URL;
 import java.util.zip.CheckedOutputStream;
 
+import javax.xml.transform.TransformerConfigurationException;
+
+import static ro.pub.cs.systems.eim.colocviu2.Constants.JSON_POKEMONS_RESULTS_TAG;
+
 public class CommunicationThread extends Thread
 {
     private Socket socket = null;
@@ -34,51 +38,103 @@ public class CommunicationThread extends Thread
             String pokemonName = bufferedReader.readLine();
             Log.d(Constants.LOG_TAG, "[COMMUNICATION THREAD] Got : " + pokemonName);
 
-            String stringUrl = Constants.HTTP_SERVER_API + pokemonName + "/";
-            URL url = new URL(stringUrl);
-            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-            connection.connect();
-
-            InputStream inputStream = connection.getInputStream();
-            BufferedReader httpBufferedReader = new BufferedReader(new InputStreamReader(inputStream));
-            StringBuffer buffer = new StringBuffer();
-            String line = "";
-
-            while ((line = httpBufferedReader.readLine()) != null)
+            if (pokemonName.equals("SPECIAL"))
             {
-                buffer.append(line);
-            }
+                URL url = new URL(Constants.HTTP_SERVER_API);
+                HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+                connection.connect();
 
-            Log.d(Constants.LOG_TAG, "[COMMUNICATION THREAD] Got from REMOTE API : " + buffer);
-            try
-            {
-                JSONObject jsonResponse = new JSONObject(buffer.toString());
-                JSONArray abilitiesArray = jsonResponse.getJSONArray(Constants.JSON_ABILITIES_TAG);
-                JSONArray typesArray = jsonResponse.getJSONArray(Constants.JSON_TYPES_TAG);
+                InputStream inputStream = connection.getInputStream();
+                BufferedReader httpBufferedReader = new BufferedReader(new InputStreamReader(inputStream));
+                StringBuffer buffer = new StringBuffer();
+                String line = "";
 
-                StringBuilder result = new StringBuilder();
-                for (int i = 0; i < abilitiesArray.length(); i++)
+                while ((line = httpBufferedReader.readLine()) != null)
                 {
-                    JSONObject currentAbility = abilitiesArray.getJSONObject(i);
-                    String abilityName = currentAbility.getJSONObject(Constants.JSON_ABILITY_TAG).getString(Constants.JSON_ABILITY_NAME_TAG);
-                    result.append(abilityName).append(", ");
+                    buffer.append(line);
                 }
 
-                result.append(Constants.SEPARATOR);
+                Log.d(Constants.LOG_TAG, "[COMMUNICATION THREAD] Got from REMOTE API : " + buffer);
 
-                for (int i = 0; i < typesArray.length(); i++)
+                try
                 {
-                    JSONObject currentType = typesArray.getJSONObject(i);
-                    String typeName = currentType.getJSONObject(Constants.JSON_TYPE_TAG).getString(Constants.JSON_TYPE_NAME_TAG);
-                    result.append(typeName).append(", ");
+                    JSONObject jsonResponse = new JSONObject(buffer.toString());
+                    JSONArray pokemonsArray = jsonResponse.getJSONArray(JSON_POKEMONS_RESULTS_TAG);
+                    StringBuilder result = new StringBuilder();
+
+                    for (int i = 0; i < 20; i++)
+                    {
+                        JSONObject currentPokemon = pokemonsArray.getJSONObject(i);
+                        String pokemon = currentPokemon.getString(Constants.JSON_POKEMON_NAME_TAG);
+                        result.append(pokemon).append(", ");
+                    }
+
+                    printWriter.println(result.toString());
+                    printWriter.flush();
+                }
+                catch (Throwable e)
+                {
+                    e.printStackTrace();
+                }
+            }
+            else
+            {
+                String stringUrl = Constants.HTTP_SERVER_API + pokemonName + "/";
+                URL url = new URL(stringUrl);
+                HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+                connection.connect();
+
+                InputStream inputStream = connection.getInputStream();
+                BufferedReader httpBufferedReader = new BufferedReader(new InputStreamReader(inputStream));
+                StringBuffer buffer = new StringBuffer();
+                String line = "";
+
+                while ((line = httpBufferedReader.readLine()) != null)
+                {
+                    buffer.append(line);
                 }
 
-                printWriter.println(result.toString());
-                printWriter.flush();
-            }
-            catch (Throwable e)
-            {
-                e.printStackTrace();
+                Log.d(Constants.LOG_TAG, "[COMMUNICATION THREAD] Got from REMOTE API : " + buffer);
+                try
+                {
+                    JSONObject jsonResponse = new JSONObject(buffer.toString());
+                    JSONArray abilitiesArray = jsonResponse.getJSONArray(Constants.JSON_ABILITIES_TAG);
+                    JSONArray typesArray = jsonResponse.getJSONArray(Constants.JSON_TYPES_TAG);
+
+                    StringBuilder result = new StringBuilder();
+                    for (int i = 0; i < abilitiesArray.length(); i++)
+                    {
+                        JSONObject currentAbility = abilitiesArray.getJSONObject(i);
+                        String abilityName = currentAbility.getJSONObject(Constants.JSON_ABILITY_TAG).getString(Constants.JSON_ABILITY_NAME_TAG);
+                        result.append(abilityName);
+
+                        if (i < abilitiesArray.length() - 1)
+                        {
+                            result.append(", ");
+                        }
+                    }
+
+                    result.append(Constants.SEPARATOR);
+
+                    for (int i = 0; i < typesArray.length(); i++)
+                    {
+                        JSONObject currentType = typesArray.getJSONObject(i);
+                        String typeName = currentType.getJSONObject(Constants.JSON_TYPE_TAG).getString(Constants.JSON_TYPE_NAME_TAG);
+                        result.append(typeName);
+
+                        if (i < typesArray.length() - 1)
+                        {
+                            result.append(", ");
+                        }
+                    }
+
+                    printWriter.println(result.toString());
+                    printWriter.flush();
+                }
+                catch (Throwable e)
+                {
+                    e.printStackTrace();
+                }
             }
         }
         catch (IOException e)
